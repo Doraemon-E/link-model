@@ -4,20 +4,29 @@ from __future__ import annotations
 import json
 import sys
 import time
-import warnings
 from pathlib import Path
+import mlx.core as mx
 from mlx_lm import generate, load
 from mlx_lm.sample_utils import make_logits_processors, make_sampler
 
 
-warnings.filterwarnings(
-    "ignore",
-    message=r"mx\.metal\.device_info is deprecated.*",
-)
+def _apply_mlx_compat_patch() -> None:
+    """
+    mlx_lm 内部仍在调用已弃用的 mx.metal.device_info。
+    这里在运行时替换为 mx.device_info，避免告警并兼容未来版本。
+    """
+    metal = getattr(mx, "metal", None)
+    modern_device_info = getattr(mx, "device_info", None)
+    if metal is None or modern_device_info is None:
+        return
+    try:
+        setattr(metal, "device_info", modern_device_info)
+    except Exception:
+        pass
 
 
 MODEL_DIR = Path("models/translation/converted/mlx-int8/hy-mt1.5-1.8b-mlx")
-TARGET_LANGUAGE = "英语"
+TARGET_LANGUAGE = "English"
 SOURCE_TEXT = "今天下午三点半在5A会议室开会。"
 PROMPT = (
     f"将以下文本翻译为{TARGET_LANGUAGE}，注意字词、语法、语义语境，"
@@ -58,9 +67,7 @@ def _load_mlx_and_generate(
         top_p=TOP_P,
         top_k=TOP_K,
     )
-    logits_processors = make_logits_processors(
-        repetition_penalty=REPETITION_PENALTY
-    )
+    logits_processors = make_logits_processors(repetition_penalty=REPETITION_PENALTY)
 
     gen_start = time.perf_counter()
     output = generate(
@@ -96,6 +103,7 @@ def _load_mlx_and_generate(
 
 
 def main() -> int:
+    _apply_mlx_compat_patch()
     model_dir = MODEL_DIR.expanduser().resolve()
 
     try:
