@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM
-from slice_update_key_value_cache import SliceUpdateKeyValueCache
+from helper.slice_update_key_value_cache import SliceUpdateKeyValueCache
 
 
 class StatefulHunYuanForCoreML(torch.nn.Module):

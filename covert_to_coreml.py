@@ -69,9 +69,9 @@ def _load_quantized_torch_model(model_dir: Path) -> torch.nn.Module:
                 # 对 LLM 你可以先试 per_channel；如果当前版本报配置不支持，再退到 per_block + block_size。
                 "granularity": "per_channel",
             },
-            "module_type_configs": {
-                torch.nn.Linear: None,
-            },
+            # "module_type_configs": {
+            #     torch.nn.Linear: None,
+            # },
         }
     )
 
