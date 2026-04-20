@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM
 import coremltools as ct
 import coremltools.optimize as cto
 import torch
@@ -8,6 +8,8 @@ from stateful_hunyuan_for_coreml import StatefulHunYuanForCoreML
 from torch.export import Dim
 import numpy as np
 from mlx_lm import convert
+
+from coreml_bundle_helpers import copy_runtime_files, write_translation_manifest
 
 
 DEFAULT_MODEL_DIR = Path("models/translation/downloaded/hy-mt1.5-1.8b")
@@ -216,15 +218,24 @@ def _build_coreml_states(
 
 def run():
     # 1. Core ML W8
-    # coreml_path = _convert_coreml(
-    #     model_dir=DEFAULT_MODEL_DIR,
-    #     output_dir=DEFAULT_COREML_OUTPUT_DIR,
-    #     context_length=DEFAULT_CONTEXT_LENGTH,
-    # )
-    # _make_zip_with_parent(
-    #     source_dir=coreml_path,
-    #     zip_path=DEFAULT_COREML_PACKAGED_ZIP,
-    # )
+    coreml_path = _convert_coreml(
+        model_dir=DEFAULT_MODEL_DIR,
+        output_dir=DEFAULT_COREML_OUTPUT_DIR,
+        context_length=DEFAULT_CONTEXT_LENGTH,
+    )
+    copy_runtime_files(
+        model_dir=DEFAULT_MODEL_DIR,
+        output_dir=DEFAULT_COREML_OUTPUT_DIR,
+    )
+    write_translation_manifest(
+        output_dir=DEFAULT_COREML_OUTPUT_DIR,
+        model_file_name=coreml_path.name,
+        context_length=DEFAULT_CONTEXT_LENGTH,
+    )
+    _make_zip_with_parent(
+        source_dir=DEFAULT_COREML_OUTPUT_DIR,
+        zip_path=DEFAULT_COREML_PACKAGED_ZIP,
+    )
 
     # 2. MLX W8
     mlx_path = _convert_mlx(
