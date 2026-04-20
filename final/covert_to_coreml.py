@@ -47,7 +47,7 @@ def _convert_coreml(model_dir: Path, output_dir: Path, context_length: int):
 
     # 构建输出路径
     output_dir.mkdir(parents=True, exist_ok=True)
-    fp16_mlpackage_path = output_dir / "fp16_mlpackage_path.mlpackage"
+    fp16_mlpackage_path = output_dir / "hy_mt_fp16.mlpackage"
 
     # 自定义CoreML 转换的 流水线
     default_passes = list(ct.PassPipeline.DEFAULT.passes)
@@ -78,6 +78,24 @@ def _convert_coreml(model_dir: Path, output_dir: Path, context_length: int):
         states=_build_coreml_states(wrapper),
     )
     fp16_model.save(str(fp16_mlpackage_path))
+
+
+def _quantize_coreml_w8(
+    model_dir: Path,
+    output_dir: Path,
+):
+    fp16_model = ct.models.MLModel(str(model_dir / "hy_mt_fp16.mlpackage"))
+    w8_mlpackage_path = output_dir / "hy_mt_w8.mlpackage"
+    # 对已经转换好的 Core ML mlprogram 做 W8 量化
+    op_config = cto.coreml.OpLinearQuantizerConfig(
+        mode="linear_symmetric",  # 默认；先用这个最稳
+        dtype=np.int8,  # W8
+        granularity="per_channel",  # 8-bit 先用 per_channel
+        weight_threshold=2048,  # 默认值；想覆盖更多小权重可调低到 512
+    )
+    config = cto.coreml.OptimizationConfig(global_config=op_config)
+    w8_model = cto.coreml.linear_quantize_weights(fp16_model, config=config)
+    w8_model.save(str(w8_mlpackage_path))
 
 
 # helper
@@ -134,6 +152,10 @@ def run():
         model_dir=DEFAULT_MODEL_DIR,
         output_dir=DEFAULT_OUTPUT_DIR,
         context_length=DEFAULT_CONTEXT_LENGTH,
+    )
+    _quantize_coreml_w8(
+        model_dir=DEFAULT_OUTPUT_DIR,
+        output_dir=DEFAULT_OUTPUT_DIR,
     )
 
 
