@@ -102,31 +102,15 @@ def _load_mlx_and_generate(
     }
 
 
-def main() -> int:
+def main():
     _apply_mlx_compat_patch()
     model_dir = MODEL_DIR.expanduser().resolve()
 
-    try:
-        inference = _load_mlx_and_generate(
-            model_dir=model_dir,
-            prompt=PROMPT,
-            max_tokens=MAX_TOKENS,
-        )
-    except Exception as exc:  # pragma: no cover - runtime diagnostics only.
-        print(
-            json.dumps(
-                {
-                    "status": "failed",
-                    "reason": "inference_error",
-                    "error_type": type(exc).__name__,
-                    "error_message": str(exc),
-                    "model_dir": str(model_dir),
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
-        return 1
+    inference = _load_mlx_and_generate(
+        model_dir=model_dir,
+        prompt=PROMPT,
+        max_tokens=MAX_TOKENS,
+    )
 
     summary = {
         "status": "passed" if inference["status"] == "passed" else "failed",
@@ -145,4 +129,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
